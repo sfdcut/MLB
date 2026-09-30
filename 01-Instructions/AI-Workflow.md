@@ -8,7 +8,7 @@ How we use AI tools on MLB work. There are three workflows, one for each kind of
 | [B: New requirement in an existing org](#workflow-b-new-requirement-in-an-existing-org) | New functionality in an org with undocumented history | Discovery first, then build in slices |
 | [C: SOW project](#workflow-c-sow-project) | Full builds with discovery, solution design and technical design documents | Per project plan |
 
-The coding rules that apply to all three are in [Coding-Standards.md](Coding-Standards.md).
+The coding rules that apply to all three are in [Coding-Standards.md](Coding-Standards.md). QA engineers testing work from any workflow should also read [For QA engineers](#for-qa-engineers).
 
 > **Referenced but not yet in this repo:** the *context pack* and *project context block* (Section 2.1 of the full guide), the *review checklist* (Section 9), and the definition of *Lane 1*. Until they're added, get them from the full AI guide.
 
@@ -292,3 +292,61 @@ The last item is worth the hour it takes. "Follow the pattern in this class" plu
 | Test | Test classes, scripts | Test classes, regression and UAT scripts from the requirement document, synthetic data | Test strategy, sign-off, exploratory testing |
 | Deployment | Deployment document | Component inventory, sequencing, pre- and post-deployment steps, verification checks, rollback plan | Every deployment action in production |
 | Handover | Runbooks, admin guide | Runbooks, admin guides, configuration workbooks, training material | Client training and accountability |
+
+---
+
+## For QA engineers
+
+These apply to testing work from all three workflows.
+
+### Two rules that always apply
+
+1. **Test in a separate session from the one that built the change.** The session that wrote the code doesn't validate it. Start a fresh session, preferably run by a different person and in a different lane. A tool reviewing its own work confirms its own assumptions, which is the opposite of testing.
+2. **Use synthetic data only.** Write test data by hand or generate it. Production extracts never go into a prompt or a sandbox seed, even when the sandbox is a full copy.
+
+### Step 1: Build test scenarios from the requirement
+
+Work from the requirement document, not from the code. If you give the tool the code, it writes tests that confirm what the code does, not what it was supposed to do.
+
+```text
+Here is the requirement and its acceptance criteria: <paste>.
+
+Do not assume anything about how it was implemented. Derive the test
+scenarios from the requirement alone: positive paths, negative paths,
+boundary conditions, bulk behaviour, and permission-restricted users.
+
+For each scenario give me the setup, the action, and the exact expected
+result. Then list any acceptance criterion you could not turn into a
+testable scenario, and explain what is ambiguous about it.
+```
+
+The last list is your defect queue. A criterion that can't be tested is almost always ambiguous. Send it back to the BA before release, not after.
+
+> **Watch for:** pasting the implementation "for context". Once the tool has seen the code, its scenarios follow the code. Keep the code out of this session.
+
+### Step 2: Review test classes you're handed
+
+```text
+Here is a test class and the class it covers: <paste both>.
+
+Tell me which tests would still pass if the logic were subtly broken, an
+inverted condition, an off-by-one on the criteria, a missing null check.
+Point out any test that asserts nothing meaningful, any that mocks away the
+logic it claims to test, and any branch of the class that nothing exercises.
+Be specific about line-level problems, not general advice.
+```
+
+Raise these as **defects, not style comments**:
+
+- tests that assert nothing
+- tests written only to reach 75% coverage
+- tests that mock away the logic they claim to test
+
+### Other QA work the tools help with
+
+| Task | What to ask for |
+|---|---|
+| UAT scripts | Scripts in language the client can follow, generated from the same requirement document the developers built against, so the client tests what was specified |
+| Regression suites | New suites, and updates when the UI or the process changes |
+| Synthetic test data | Data sets that meet required fields, validation rules and record types |
+| Bug triage | Turn a vague client report into steps that reproduce the problem, and draft the defect record |
